@@ -1,0 +1,10 @@
+1) Construire un réseau de neurones artificiel
+
+En utilisant le code développé en TP, mettez en œuvre un réseau de neurones artificiel entièrement
+connecté de deux couches cachées de 16 et 8 unités respectivement, activées avec tanh, et entraîné
+sur votre ensemble d’entraînement en mini-batch.
+
+
+- Cette configuration (16,8 neurones avec tanh) offre de meilleurs résultats car elle combine une capacité de modélisation accrue (plus de neurones) avec une meilleure stabilité d'apprentissage (tanh et mini-batch), permettant de capturer des patterns plus complexes tout en évitant le surapprentissage (Overfitting).
+    -> 100 epochs : Error durant l'entrainement à 0.4833 et durant la validation : 0.4845 (avec 2 couches caché de 3 et 2 neurones)
+    -> 100 epochs : Error durant l'entrainement à 0.1948 et durant la validation : 0.1764 (avec 2 couches caché de 16 et 8 neurones)

@@ -2,9 +2,143 @@
 
 En utilisant le code développé en TP, mettez en œuvre un réseau de neurones artificiel entièrement
 connecté de deux couches cachées de 16 et 8 unités respectivement, activées avec tanh, et entraîné
-sur votre ensemble d’entraînement en mini-batch.
+sur votre ensemble d'entraînement en mini-batch.
 
 
 - Cette configuration (16,8 neurones avec tanh) offre de meilleurs résultats car elle combine une capacité de modélisation accrue (plus de neurones) avec une meilleure stabilité d'apprentissage (tanh et mini-batch), permettant de capturer des patterns plus complexes tout en évitant le surapprentissage (Overfitting).
     -> 100 epochs : Error durant l'entrainement à 0.4833 et durant la validation : 0.4845 (avec 2 couches caché de 3 et 2 neurones)
     -> 100 epochs : Error durant l'entrainement à 0.1948 et durant la validation : 0.1764 (avec 2 couches caché de 16 et 8 neurones)
+
+2) Sélection d'instances
+
+Résultats et observations :
+- Nous avons sélectionné 4 instances au total : 3 correctement classées et 1 incorrectement classée
+- Les instances correctement classées montrent une forte confiance dans leurs prédictions
+- L'instance incorrectement classée (instance 3) est particulièrement intéressante car elle montre une confusion entre les classes 1 et 2
+- Le choix des instances a été guidé par :
+  - La diversité des classes (une instance de chaque classe)
+  - La confiance des prédictions
+  - La présence d'une erreur de classification significative
+
+3) Génération d'instances perturbées
+
+Résultats et observations :
+- Pour chaque instance sélectionnée, nous avons généré 250 versions perturbées
+- Le bruit appliqué (±10%) a permis de créer des variations significatives tout en restant dans le domaine de validité des données
+- Les prédictions sur les instances perturbées ont révélé :
+  - Une forte stabilité pour les instances correctement classées
+  - Une plus grande variabilité pour l'instance incorrectement classée
+  - Des patterns intéressants dans la distribution des prédictions
+
+4) Entraînement de modèles interprétables locaux
+
+Résultats et observations :
+- Nous avons choisi d'implémenter une régression linéaire from scratch avec descente de gradient
+- Pour chaque instance, nous avons entraîné 3 modèles (un par classe)
+- Les résultats montrent :
+  - Une bonne capacité d'approximation locale du réseau de neurones
+  - Des coefficients stables et interprétables
+  - Des pertes finales faibles pour les instances correctement classées
+  - Des pertes plus élevées pour l'instance incorrectement classée, reflétant la confusion du modèle
+
+Choix de la régression linéaire :
+- Avantages :
+  - Simplicité d'interprétation des coefficients
+  - Rapidité d'entraînement
+  - Bonne approximation locale
+- Limitations :
+  - Ne capture pas les relations non-linéaires complexes
+  - Sensible aux outliers
+  - Ne prend pas en compte les interactions entre attributs
+
+5) Examen de la contribution des attributs
+
+1. Interprétez le modèle local entraîné pour chaque instance sélectionnée à l'étape 2 pour
+évaluer le degré de contribution de chaque attribut à la prédiction réalisée par le réseau de
+neurones. Qu'est-ce qui constitue le « degré de contribution » d'un attribut de votre modèle
+local ?
+2. Comparer ces contributions entre les instances correctement et incorrectement classées.
+3. Proposez une visualisation pour soutenir votre analyse (e.g. des diagrammes en barres
+indicatives de la contribution des attributs).
+
+1. Analyse des contributions des attributs :
+
+    Instances correctement classées :
+
+    a) Instance 0 (Classe 0) :
+    - Les attributs les plus importants sont sepal_length (0.0919) et sepal_width (0.0924)
+    - petal_length a une contribution modérée (0.0444)
+    - petal_width a une contribution faible (0.0072)
+    - Les contributions pour les autres classes sont négligeables
+
+    b) Instance 1 (Classe 1) :
+    - Contributions équilibrées entre sepal_length (0.0745), sepal_width (0.0564) et petal_length (0.0725)
+    - petal_width a une contribution modérée (0.0315)
+    - Les contributions pour les autres classes sont très faibles
+
+    c) Instance 2 (Classe 2) :
+    - petal_length est l'attribut le plus important (0.2835)
+    - sepal_length et sepal_width ont des contributions modérées
+    - petal_width a une contribution significative (0.0682)
+
+    2. Instance incorrectement classée :
+
+    Instance 3 (Classe 2 prédite comme 1) :
+
+    - Contributions très élevées pour toutes les caractéristiques
+    - petal_length a la plus forte contribution (0.4111 pour la classe 2, 0.3399 pour la classe 1)
+    - sepal_length a également une forte contribution (0.3681 pour la classe 1, 0.3056 pour la classe 2)
+    - Les contributions sont plus équilibrées entre les classes 1 et 2, expliquant la confusion
+
+2. Comparaison entre instances correctes et incorrectes :
+ - Les instances correctement classées montrent des contributions clairement dominantes pour leur classe réelle
+ - L'instance incorrectement classée montre des contributions élevées et similaires pour les classes 1 et 2
+ - Les pertes finales sont plus élevées pour l'instance incorrectement classée (0.0391 et 0.0377) que pour les instances correctement classées
+
+3. Les visualisations ont été sauvegardées dans le dossier results/local_models/ sous le nom instance_X_contributions_comparison.png. Ces graphiques montrent clairement la distribution des contributions des attributs pour chaque classe.
+
+6) Conclusion réflexive
+
+1. Estimation directe des contributions :
+   Il n'est pas possible d'obtenir directement une estimation claire des contributions des attributs dans un réseau de neurones profond pour plusieurs raisons :
+   - Les réseaux de neurones sont des modèles complexes avec des interactions non-linéaires entre les couches
+   - Les poids des connexions ne représentent pas directement l'importance des attributs d'entrée
+   - Les activations des neurones sont le résultat de transformations non-linéaires successives
+   - Il n'existe pas de méthode mathématique directe pour "remonter" l'importance des attributs à travers les couches
+
+2. Avantages des approximations locales :
+   Les modèles locaux nous permettent de mieux comprendre le réseau de neurones car :
+   - Ils fournissent une interprétation linéaire simple autour d'une instance donnée
+   - Ils capturent les relations locales entre les attributs et les prédictions
+   - Ils permettent de visualiser l'importance relative des attributs
+   - Ils révèlent comment de petites perturbations des attributs affectent les prédictions
+   - Ils mettent en évidence les attributs qui sont les plus sensibles aux changements
+
+3. Forces et faiblesses de l'approche locale :
+
+   Forces :
+   - Simplicité d'interprétation : Les coefficients de régression linéaire sont faciles à comprendre
+   - Transparence locale : On peut voir exactement comment chaque attribut influence la prédiction
+   - Robustesse : L'approche est stable et reproductible
+   - Flexibilité : On peut adapter la taille du voisinage (nombre d'instances perturbées)
+   - Visualisation : Facilite la création de graphiques explicatifs
+
+   Faiblesses :
+   - Approximation locale : Ne capture que le comportement local du modèle
+   - Non-globalité : Les interprétations peuvent varier selon la région de l'espace d'entrée
+   - Dépendance aux données : La qualité de l'approximation dépend de la distribution des instances perturbées
+   - Complexité computationnelle : Nécessite de générer et d'évaluer de nombreuses instances perturbées
+   - Sensibilité aux paramètres : Les résultats dépendent du choix de l'échelle de perturbation
+
+   Limitations spécifiques à notre implémentation :
+   - La régression linéaire peut ne pas capturer des relations non-linéaires complexes
+   - Les contributions sont calculées indépendamment pour chaque classe
+   - L'approche ne prend pas en compte les interactions entre attributs
+   - La taille fixe du voisinage (250 instances) peut ne pas être optimale pour tous les cas
+
+   Suggestions d'amélioration :
+   1. Utiliser des modèles locaux plus sophistiqués (par exemple, des arbres de décision)
+   2. Adapter dynamiquement la taille du voisinage
+   3. Prendre en compte les interactions entre attributs
+   4. Utiliser des techniques de régularisation pour améliorer la stabilité des coefficients
+   5. Intégrer des méthodes de validation croisée pour évaluer la robustesse des interprétations

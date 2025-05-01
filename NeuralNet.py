@@ -324,7 +324,7 @@ def main():
     X_train, y_train = X_train.to_numpy(), y_train.to_numpy()
     X_val, y_val = X_val.to_numpy(), y_val.to_numpy()
     
-    nn = NeuralNet(hidden_layer_sizes=(16,8), batch_size=4, activation='tanh',
+    nn = NeuralNet(hidden_layer_sizes=(8,), batch_size=4, activation='tanh',
                    learning_rate=0.01, epoch=100)
     
     nn.fit(X_train, y_train, X_val, y_val)

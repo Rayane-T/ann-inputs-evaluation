@@ -261,6 +261,42 @@ class NeuralNet:
     def __repr__(self):
       return self.__str__()
 
+    def save_weights(self, filename):
+        """Save the weights and biases of the network to a file."""
+        # Convert lists to arrays with dtype=object to handle different sizes
+        weights_array = np.array(self.weights, dtype=object)
+        biases_array = np.array(self.biases, dtype=object)
+        
+        np.savez(filename, 
+                 weights=weights_array,
+                 biases=biases_array,
+                 hidden_layer_sizes=self.hidden_layer_sizes,
+                 n_inputs=self.n_inputs,
+                 n_outputs=self.n_outputs)
+        print(f"Model weights saved to {filename}")
+    
+    def load_weights(self, filename):
+        """Load the weights and biases from a file."""
+        data = np.load(filename, allow_pickle=True)
+        
+        # Load network architecture
+        self.hidden_layer_sizes = tuple(data['hidden_layer_sizes'])
+        self.n_inputs = int(data['n_inputs'])
+        self.n_outputs = int(data['n_outputs'])
+        self.n_layers = len(self.hidden_layer_sizes)
+        
+        # Load weights and biases
+        self.weights = list(data['weights'])
+        self.biases = list(data['biases'])
+        
+        # Initialize other arrays
+        self.Z = [None] * (self.n_layers + 1)
+        self.A = [None] * (self.n_layers + 1)
+        self.df = [None] * (self.n_layers + 1)
+        
+        self.has_trained = True
+        print(f"Model weights loaded from {filename}")
+
 
 ###############################################################################
 # MODULE TEST

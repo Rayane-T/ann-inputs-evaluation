@@ -12,10 +12,9 @@ def tanh(Z):
     Returns:
       (A : 2d ndarray of activated outputs, df: derivative component wise)
     """
-    A = np.empty(Z.shape)
-    A = 2.0/(1 + np.exp(-2.0*Z)) - 1 # A = np.tanh(Z)
-    df = 1-A**2
-    return A,df
+    A = np.tanh(Z)  # Use numpy's built-in tanh function
+    df = 1 - A**2
+    return A, df
   
 def sintr(Z):
     A = np.empty(Z.shape)

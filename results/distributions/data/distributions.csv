@@ -1,0 +1,5 @@
+Instance,True_Class,Predicted_Class,Feature_sepal length (cm),Feature_sepal width (cm),Feature_petal length (cm),Feature_petal width (cm),True_Prob_setosa,True_Prob_versicolor,True_Prob_virginica,Pred_Prob_setosa,Pred_Prob_versicolor,Pred_Prob_virginica
+1,virginica,virginica,6.8,3.2,5.9,2.3,0.0,0.0,1.0,0.016944705637946773,0.11175280924413805,0.8713024851179153
+2,versicolor,versicolor,6.3,3.3,4.7,1.6,0.0,1.0,0.0,0.03992630762376277,0.48964823623000187,0.47042545614623543
+3,virginica,virginica,6.4,2.8,5.6,2.1,0.0,0.0,1.0,0.01726989829589768,0.13090710303552855,0.8518229986685737
+4,versicolor,versicolor,5.6,2.5,3.9,1.1,0.0,1.0,0.0,0.04207074367190235,0.8972660581185474,0.06066319820955015

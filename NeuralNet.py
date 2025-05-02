@@ -38,6 +38,12 @@ class NeuralNet:
       elif activation == 'relu'    : self.activation = Utility.relu
       elif activation == 'sintr'   : self.activation = Utility.sintr 
       else : self.activation = Utility.identity
+      
+      # Initialize training history
+      self.train_errors = []
+      self.val_errors = []
+      self.train_accuracies = []
+      self.val_accuracies = []
           
       return None
     
@@ -68,8 +74,11 @@ class NeuralNet:
         X_train, X_val, y_train, y_val = \
           train_test_split(X_train, y_train, test_size=val, random_state=42)
       
-      epoch_train_error = []
-      epoch_val_error  = []
+      # Reset training history
+      self.train_errors = []
+      self.val_errors = []
+      self.train_accuracies = []
+      self.val_accuracies = []
       
       # Create progress bar for epochs
       epoch_pbar = tqdm(range(self.n_epoch), desc="Training Progress")
@@ -117,37 +126,67 @@ class NeuralNet:
           
           # Training error
           ave_train_error /= len(batch_train_error)
-          epoch_train_error.append(ave_train_error)
+          self.train_errors.append(ave_train_error)
               
           # Validation error
           val_error = self.__feed_forward(X_val.transpose(), y_val.transpose())[0]
-          epoch_val_error.append(val_error)
+          self.val_errors.append(val_error)
+          
+          # Calculate accuracies
+          train_pred = self.predict(X_train)
+          val_pred = self.predict(X_val)
+          
+          train_acc = np.mean(np.argmax(train_pred, axis=1) == np.argmax(y_train, axis=1))
+          val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(y_val, axis=1))
+          
+          self.train_accuracies.append(train_acc)
+          self.val_accuracies.append(val_acc)
           
           # Update epoch progress bar
           epoch_pbar.set_postfix({
               'Train Error': f"{ave_train_error:.4f}",
-              'Val Error': f"{val_error:.4f}"
+              'Val Error': f"{val_error:.4f}",
+              'Train Acc': f"{train_acc:.4f}",
+              'Val Acc': f"{val_acc:.4f}"
           })
           
           if e % 10 == 0:
               print("\n* Epoch " + str(e) + " -- Error :   Train : " + \
                     "{:.4f}".format(ave_train_error) + "    Validation : "+ \
                         "{:.4f}".format(val_error))
+              print("  Accuracy :   Train : " + \
+                    "{:.4f}".format(train_acc) + "    Validation : "+ \
+                        "{:.4f}".format(val_acc))
           
           #### END OF CURRENT EPOCH ####
       #### END OF EPOCHS ####
       
       self.has_trained = True
       
-      # Plot error as a function of training epoch
-      fig = plt.figure(figsize=(12,8))
-      fig.suptitle('Evolution of error during training', fontsize=20)
-      plt.plot(epoch_train_error, label="Train")
-      plt.plot(epoch_val_error,  label="Validation")
-      plt.legend()
-      plt.xlabel('Epoch of training', fontsize=20)
-      plt.ylabel('Error', fontsize=20)
-      plt.show()
+      # Create figure with two subplots
+      fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+      
+      # Plot accuracy
+      ax1.plot(self.train_accuracies, label="Training Accuracy")
+      ax1.plot(self.val_accuracies, label="Validation Accuracy")
+      ax1.set_xlabel('Epoch')
+      ax1.set_ylabel('Accuracy')
+      ax1.set_title('Model Accuracy During Training')
+      ax1.legend()
+      ax1.grid(True)
+      
+      # Plot error
+      ax2.plot(self.train_errors, label="Training Error")
+      ax2.plot(self.val_errors, label="Validation Error")
+      ax2.set_xlabel('Epoch')
+      ax2.set_ylabel('Error')
+      ax2.set_title('Model Error During Training')
+      ax2.legend()
+      ax2.grid(True)
+      
+      plt.tight_layout()
+      plt.savefig('results/distributions/plots/training_history.png')
+      plt.close()
       
       return None
     
@@ -325,7 +364,7 @@ def main():
     X_val, y_val = X_val.to_numpy(), y_val.to_numpy()
     
     nn = NeuralNet(hidden_layer_sizes=(8,), batch_size=4, activation='tanh',
-                   learning_rate=0.01, epoch=100)
+                   learning_rate=0.01, epoch=150)
     
     nn.fit(X_train, y_train, X_val, y_val)
     

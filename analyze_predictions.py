@@ -131,10 +131,54 @@ def main():
     X_train, X_test, y_train, y_test, feature_names, target_names = load_data()
     model = load_model()
     
-    # Train model
+    # Train model and get training history
     print("Training model...")
     model.fit(X_train, y_train, X_test, y_test)
     model.save_weights('results/distributions/data/model_weights.npz')
+    
+    # Get training history
+    train_errors = model.train_errors
+    val_errors = model.val_errors
+    
+    # Calculate accuracy for each epoch
+    train_accuracies = []
+    val_accuracies = []
+    
+    for epoch in range(len(train_errors)):
+        # Calculate training accuracy
+        train_pred = model.predict(X_train)
+        train_acc = np.mean(np.argmax(train_pred, axis=1) == np.argmax(y_train, axis=1))
+        train_accuracies.append(train_acc)
+        
+        # Calculate validation accuracy
+        val_pred = model.predict(X_test)
+        val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(y_test, axis=1))
+        val_accuracies.append(val_acc)
+    
+    # Create figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+    
+    # Plot accuracy
+    ax1.plot(train_accuracies, label='Training Accuracy')
+    ax1.plot(val_accuracies, label='Validation Accuracy')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Accuracy')
+    ax1.set_title('Model Accuracy During Training')
+    ax1.legend()
+    ax1.grid(True)
+    
+    # Plot error
+    ax2.plot(train_errors, label='Training Error')
+    ax2.plot(val_errors, label='Validation Error')
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('Error')
+    ax2.set_title('Model Error During Training')
+    ax2.legend()
+    ax2.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig('results/distributions/plots/training_history.png')
+    plt.close()
     
     # Analyze predictions
     analyze_predictions(model, X_test, y_test, feature_names, target_names)

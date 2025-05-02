@@ -68,7 +68,7 @@ def select_interesting_instances(results):
     # Select 3 incorrectly classified instances
     incorrect = results[~results['correct']]
     if len(incorrect) > 0:
-        # Group by true class and predicted class
+            # Group by true class and predicted class
         grouped = incorrect.groupby(['true_class', 'pred_class'])
         
         # Select one instance from each interesting group

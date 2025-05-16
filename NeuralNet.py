@@ -364,7 +364,7 @@ def main():
     X_val, y_val = X_val.to_numpy(), y_val.to_numpy()
     
     nn = NeuralNet(hidden_layer_sizes=(8,), batch_size=4, activation='tanh',
-                   learning_rate=0.01, epoch=150)
+                   learning_rate=0.01, epoch=100)
     
     nn.fit(X_train, y_train, X_val, y_val)
     

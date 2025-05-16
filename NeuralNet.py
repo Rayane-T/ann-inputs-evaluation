@@ -198,6 +198,12 @@ class NeuralNet:
       _, probabilities = self.__feed_forward(X_batch.transpose())
       return probabilities.transpose()
     
+    def forward(self, X):
+        """
+        Alias for predict method to maintain compatibility with the analysis code.
+        """
+        return self.predict(X)
+    
     def __feed_forward(self, X_batch, y_batch=None):
       """
       Performs a forward pass using batch X_batch
@@ -335,6 +341,12 @@ class NeuralNet:
         
         self.has_trained = True
         print(f"Model weights loaded from {filename}")
+
+    def set_weights(self, weights):
+        """
+        Set the weights of the model.
+        """
+        self.weights = weights
 
 
 ###############################################################################

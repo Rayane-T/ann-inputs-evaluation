@@ -12,7 +12,12 @@ def tanh(Z):
     Returns:
       (A : 2d ndarray of activated outputs, df: derivative component wise)
     """
-    A = np.tanh(Z)  # Use numpy's built-in tanh function
+    Z = np.array(Z, dtype=float)
+    if Z.ndim == 0:
+        Z = Z.reshape(1, 1)
+    elif Z.ndim == 1:
+        Z = Z.reshape(1, -1)
+    A = np.tanh(Z)
     df = 1 - A**2
     return A, df
   

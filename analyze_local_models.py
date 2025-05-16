@@ -4,13 +4,14 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from NeuralNet import NeuralNet
 from utils import load_data, load_model
+import torch
 
 def softmax(x):
     """Compute softmax values for each set of scores in x."""
     e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
     return e_x / np.sum(e_x, axis=1, keepdims=True)
 
-def select_interesting_instances(X_test, y_test, model, num_instances=4):
+def select_interesting_instances(X_test, y_test, model, num_instances=6):
     """Select interesting instances based on prediction confidence and correctness."""
     # Get predictions
     predictions = model.forward(X_test)
@@ -22,29 +23,60 @@ def select_interesting_instances(X_test, y_test, model, num_instances=4):
     confidence = max_probs
     correct = (predicted_classes == y_test)
     
-    # Select instances with interesting characteristics
+    # Group instances by true class
+    instances_by_class = {}
+    for i in range(len(y_test)):
+        true_class = y_test[i]
+        if true_class not in instances_by_class:
+            instances_by_class[true_class] = []
+        instances_by_class[true_class].append({
+            'index': i,
+            'true_class': true_class,
+            'predicted_class': predicted_classes[i],
+            'confidence': confidence[i],
+            'correct': correct[i]
+        })
+    
+    # Select interesting instances
     interesting_indices = []
     
-    # 1. Correctly classified with high confidence
-    high_conf_correct = np.where((confidence > 0.9) & correct)[0]
-    if len(high_conf_correct) > 0:
-        interesting_indices.append(high_conf_correct[0])
-        
-    # 2. Correctly classified with low confidence
-    low_conf_correct = np.where((confidence < 0.7) & correct)[0]
-    if len(low_conf_correct) > 0:
-        interesting_indices.append(low_conf_correct[0])
-        
-    # 3. Incorrectly classified with high confidence
-    high_conf_incorrect = np.where((confidence > 0.9) & ~correct)[0]
-    if len(high_conf_incorrect) > 0:
-        interesting_indices.append(high_conf_incorrect[0])
-        
-    # 4. Incorrectly classified with low confidence
-    low_conf_incorrect = np.where((confidence < 0.7) & ~correct)[0]
-    if len(low_conf_incorrect) > 0:
-        interesting_indices.append(low_conf_incorrect[0])
-        
+    # 1. Correctly classified instances (3)
+    correct_instances = [i for i in range(len(y_test)) if correct[i]]
+    if len(correct_instances) > 0:
+        # Sort by confidence to get different confidence levels
+        correct_instances.sort(key=lambda i: confidence[i])
+        # Take one with high confidence
+        interesting_indices.append(correct_instances[-1])
+        # Take one with medium confidence
+        interesting_indices.append(correct_instances[len(correct_instances)//2])
+        # Take one with low confidence
+        interesting_indices.append(correct_instances[0])
+    
+    # 2. Incorrectly classified instances (3)
+    incorrect_instances = [i for i in range(len(y_test)) if not correct[i]]
+    if len(incorrect_instances) > 0:
+        # Find instances of same true class but different predictions
+        for true_class, instances in instances_by_class.items():
+            if len(instances) > 1:
+                # Get instances with different predictions
+                pred_classes = set(inst['predicted_class'] for inst in instances)
+                if len(pred_classes) > 1:
+                    # Take one instance for each prediction
+                    for pred_class in pred_classes:
+                        matching_instances = [inst for inst in instances 
+                                           if inst['predicted_class'] == pred_class 
+                                           and not inst['correct']]
+                        if matching_instances:
+                            interesting_indices.append(matching_instances[0]['index'])
+                            if len(interesting_indices) >= 6:  # We have enough instances
+                                break
+    
+    # If we don't have enough instances, add more incorrect ones
+    while len(interesting_indices) < 6 and len(incorrect_instances) > 0:
+        remaining_incorrect = [i for i in incorrect_instances if i not in interesting_indices]
+        if remaining_incorrect:
+            interesting_indices.append(remaining_incorrect[0])
+    
     return interesting_indices[:num_instances]
 
 def build_local_model(X_train, y_train, X_test, instance_idx, max_depth=4, model=None):
@@ -100,18 +132,41 @@ def main():
     
     print("\nSelected Interesting Instances:")
     print("===============================")
-    for idx in interesting_indices:
-        prediction = model.forward(X_test[idx:idx+1])
-        prob = softmax(prediction)
-        max_prob = np.max(prob)
-        pred_class = np.argmax(prob)
-        correct = pred_class == y_test[idx]
-        
+    print("\nCorrectly Classified Instances:")
+    print("-------------------------------")
+    for idx in interesting_indices[:3]:
+        model.eval()
+        with torch.no_grad():
+            prediction = model.forward(X_test[idx:idx+1])
+            prob = softmax(prediction)
+            max_prob = np.max(prob)
+            pred_class = np.argmax(prob)
+            correct = pred_class == y_test[idx]
+            
         print(f"\nInstance {idx}:")
         print(f"True class: {y_test[idx]}")
         print(f"Predicted class: {pred_class}")
         print(f"Confidence: {max_prob:.3f}")
         print(f"Correctly classified: {correct}")
+        print(f"Feature values: {X_test[idx]}")
+    
+    print("\nIncorrectly Classified Instances:")
+    print("--------------------------------")
+    for idx in interesting_indices[3:]:
+        model.eval()
+        with torch.no_grad():
+            prediction = model.forward(X_test[idx:idx+1])
+            prob = softmax(prediction)
+            max_prob = np.max(prob)
+            pred_class = np.argmax(prob)
+            correct = pred_class == y_test[idx]
+            
+        print(f"\nInstance {idx}:")
+        print(f"True class: {y_test[idx]}")
+        print(f"Predicted class: {pred_class}")
+        print(f"Confidence: {max_prob:.3f}")
+        print(f"Correctly classified: {correct}")
+        print(f"Feature values: {X_test[idx]}")
     
     # Build and evaluate local model for the first interesting instance
     instance_idx = interesting_indices[0]

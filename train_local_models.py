@@ -4,87 +4,121 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
+from NeuralNet import NeuralNet
+from analyze_interesting_instances import analyze_interesting_instances
 
-class LinearRegression:
+class LocalLinearModel:
     def __init__(self, learning_rate=0.01, n_iterations=1000):
         self.learning_rate = learning_rate
         self.n_iterations = n_iterations
         self.weights = None
         self.bias = None
-        self.loss_history = []
+        self.scaler = StandardScaler()
     
     def fit(self, X, y):
-        n_samples, n_features = X.shape
+        # Normaliser les données
+        X_scaled = self.scaler.fit_transform(X)
+        
+        # Initialiser les paramètres
+        n_features = X_scaled.shape[1]
         self.weights = np.zeros(n_features)
         self.bias = 0
         
+        # Descente de gradient
         for _ in range(self.n_iterations):
-            # Predictions
-            y_pred = np.dot(X, self.weights) + self.bias
+            # Prédictions
+            y_pred = np.dot(X_scaled, self.weights) + self.bias
             
-            # Compute gradients
-            dw = (1/n_samples) * np.dot(X.T, (y_pred - y))
-            db = (1/n_samples) * np.sum(y_pred - y)
+            # Calcul des gradients
+            dw = np.dot(X_scaled.T, (y_pred - y)) / len(y)
+            db = np.sum(y_pred - y) / len(y)
             
-            # Update parameters
+            # Mise à jour des paramètres
             self.weights -= self.learning_rate * dw
             self.bias -= self.learning_rate * db
-            
-            # Compute and store loss
-            loss = mean_squared_error(y, y_pred)
-            self.loss_history.append(loss)
     
     def predict(self, X):
-        return np.dot(X, self.weights) + self.bias
+        X_scaled = self.scaler.transform(X)
+        return np.dot(X_scaled, self.weights) + self.bias
 
-def load_perturbed_data(instance_id):
-    """Load perturbed instances and their predictions for a given instance."""
-    perturbed_path = f'results/perturbed_instances/instance_{instance_id}_perturbed.csv'
-    predictions_path = f'results/perturbed_instances/instance_{instance_id}_predictions.csv'
-    
-    X = pd.read_csv(perturbed_path).values
-    y = pd.read_csv(predictions_path).values
-    
-    return X, y
+def generate_local_dataset(X, y, instance_idx, n_samples=1000, noise_level=0.1):
+    """Génère un jeu de données local autour de l'instance donnée."""
+    n_features = X.shape[1]
+    # Convertir en float64
+    X = X.astype(np.float64)
+    local_X = np.random.normal(X[instance_idx], noise_level, (n_samples, n_features))
+    local_y = y[instance_idx]
+    return local_X, local_y
 
-def train_local_models(instance_id, X, y, features):
-    """Train local models for each class probability."""
-    models = []
-    predictions = []
+def train_and_evaluate_local_models():
+    # Charger les données
+    data = pd.read_csv('iris_extended.csv')
+    X = data.drop(columns=['species'])
+    # Convertir les colonnes booléennes en int
+    for col in X.columns:
+        if X[col].dtype == bool:
+            X[col] = X[col].astype(int)
+    X = pd.get_dummies(X).values.astype(np.float64)
+    y = pd.get_dummies(data['species']).values
     
-    # Train a model for each class probability
-    for class_idx in range(3):
-        # Create and train model
-        model = LinearRegression(learning_rate=0.01, n_iterations=1000)
-        model.fit(X, y[:, class_idx])
-        models.append(model)
-        
-        # Make predictions
-        y_pred = model.predict(X)
-        predictions.append(y_pred)
-        
-        # Plot feature importance
-        plt.figure(figsize=(10, 6))
-        plt.bar(features, model.weights)
-        plt.title(f'Feature Importance for Class {class_idx}')
-        plt.xlabel('Features')
-        plt.ylabel('Weight')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f'results/local_models/instance_{instance_id}_class_{class_idx}_importance.png')
-        plt.close()
-        
-        # Plot loss history
-        plt.figure(figsize=(10, 6))
-        plt.plot(model.loss_history)
-        plt.title(f'Loss History for Class {class_idx}')
-        plt.xlabel('Iteration')
-        plt.ylabel('MSE Loss')
-        plt.tight_layout()
-        plt.savefig(f'results/local_models/instance_{instance_id}_class_{class_idx}_loss.png')
-        plt.close()
+    # Charger le modèle de réseau de neurones
+    model = NeuralNet(hidden_layer_sizes=(16, 8), activation='sigmoid')
+    model.load_weights('model_weights.npy.npz')
     
-    return models, np.array(predictions).T
+    # Obtenir les instances intéressantes
+    interesting_instances = analyze_interesting_instances()
+    
+    # Sélectionner deux instances spécifiques
+    selected_instances = []
+    for desc, idx in interesting_instances:
+        if 'Haute confiance correcte' in desc:
+            selected_instances.append((desc, idx))
+        elif 'Basse confiance incorrecte' in desc:
+            selected_instances.append((desc, idx))
+        if len(selected_instances) == 2:
+            break
+    
+    # Pour chaque instance sélectionnée
+    for desc, idx in selected_instances:
+        print(f"\nAnalyse du modèle local pour l'instance {desc} (Index: {idx}):")
+        print("-" * 80)
+        
+        # Générer le jeu de données local
+        local_X, local_y = generate_local_dataset(X, y, idx)
+        
+        # Obtenir les prédictions du réseau de neurones
+        nn_predictions = model.predict(local_X)
+        
+        # Entraîner un modèle local pour chaque classe
+        local_models = []
+        for class_idx in range(y.shape[1]):
+            model_local = LocalLinearModel()
+            model_local.fit(local_X, nn_predictions[:, class_idx])
+            local_models.append(model_local)
+        
+        # Évaluer les performances du modèle local
+        local_predictions = np.array([model.predict(local_X) for model in local_models]).T
+        
+        # Calculer l'erreur MSE entre les prédictions du réseau et du modèle local
+        mse = np.mean((nn_predictions - local_predictions) ** 2)
+        
+        print(f"Erreur MSE du modèle local: {mse:.6f}")
+        
+        # Afficher les coefficients du modèle local pour la classe prédite
+        pred_class = np.argmax(model.predict(X[idx:idx+1]))
+        print(f"\nCoefficients du modèle local pour la classe {pred_class}:")
+        for i, coef in enumerate(local_models[pred_class].weights):
+            print(f"  Attribut {i}: {coef:.4f}")
+        
+        # Comparer les prédictions pour l'instance originale
+        nn_pred = model.predict(X[idx:idx+1])[0]
+        local_pred = np.array([model.predict(X[idx:idx+1])[0] for model in local_models])
+        
+        print("\nComparaison des prédictions pour l'instance originale:")
+        print("Réseau de neurones:", nn_pred)
+        print("Modèle local:", local_pred)
+        print("-" * 80)
 
 def visualize_predictions(instance_id, y_true, y_pred):
     """Visualize true vs predicted probabilities."""
@@ -167,4 +201,4 @@ def main():
             print(f"Final Loss: {model.loss_history[-1]:.4f}")
 
 if __name__ == '__main__':
-    main() 
+    train_and_evaluate_local_models() 

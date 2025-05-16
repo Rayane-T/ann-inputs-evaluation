@@ -56,6 +56,24 @@ def analyze_interesting_instances():
     if len(med_conf_incorrect) > 0:
         interesting_instances.append(('Confiance moyenne incorrecte', med_conf_incorrect[0]))
     
+    # Si nous n'avons pas 3 instances correctes, ajoutons des instances supplémentaires
+    if len([i for i, _ in interesting_instances if 'correcte' in i]) < 3:
+        additional_correct = np.where(correct)[0]
+        for idx in additional_correct:
+            if idx not in [i for _, i in interesting_instances]:
+                interesting_instances.append(('Instance correcte supplémentaire', idx))
+                if len([i for i, _ in interesting_instances if 'correcte' in i]) >= 3:
+                    break
+    
+    # Si nous n'avons pas 3 instances incorrectes, ajoutons des instances supplémentaires
+    if len([i for i, _ in interesting_instances if 'incorrecte' in i]) < 3:
+        additional_incorrect = np.where(incorrect)[0]
+        for idx in additional_incorrect:
+            if idx not in [i for _, i in interesting_instances]:
+                interesting_instances.append(('Instance incorrecte supplémentaire', idx))
+                if len([i for i, _ in interesting_instances if 'incorrecte' in i]) >= 3:
+                    break
+    
     # Afficher les instances intéressantes
     class_names = ['setosa', 'versicolor', 'virginica']
     print("\nInstances intéressantes sélectionnées :")
@@ -71,10 +89,15 @@ def analyze_interesting_instances():
         print(f"Vraie classe: {true_class}")
         print(f"Classe prédite: {pred_class}")
         print(f"Confiance: {confidence:.4f}")
+        print("Distribution de probabilités:")
+        for i, prob in enumerate(predictions[idx]):
+            print(f"  {class_names[i]}: {prob:.4f}")
         print("Attributs:")
         for attr, value in zip(data.columns[:-1], X[idx]):
             print(f"  {attr}: {value}")
         print("-" * 80)
+    
+    return interesting_instances
 
 if __name__ == '__main__':
     analyze_interesting_instances() 
